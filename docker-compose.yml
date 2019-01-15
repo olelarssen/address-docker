@@ -1,0 +1,48 @@
+version: '2'
+services:
+  mysql-test:
+    image: mysql:5.7
+    restart: always
+    volumes:
+      - ./storage/mysql/data:/var/lib/mysql
+      - ./storage/mysql/log:/var/log/mysql
+      - ./storage/mysql/dump:/usr/local/dump/
+    container_name: mysql-test
+    environment:
+      - "MYSQL_DATABASE=test"
+      - "MYSQL_USER=test"
+      - "MYSQL_PASSWORD=test"
+      - "MYSQL_ROOT_PASSWORD=test"
+      - "MYSQL_TCP_PORT=33061"
+      - "bind_address=0.0.0.0"
+    ports:
+      - "33061:33061"
+
+  app-test:
+      container_name: php-fpm-test
+      build: storage/app
+      volumes:
+        - ./sites:/var/www:rw
+      working_dir: /var/www
+      links:
+        - mysql-test
+
+  web-test:
+    image: nginx
+    container_name: nginx-test
+    ports:
+      - "81:80"
+      - "4431:443"
+      - "8081:8081"
+      - "44343:44343"
+    volumes_from:
+      - app-test:rw
+    volumes:
+      - ./storage/nginx/vhosts:/etc/nginx/conf.d
+      - ./storage/logs/nginx:/var/log/nginx
+      - ./storage/nginx/ssl:/etc/nginx/ssl
+      - ./sites:/var/www
+      - ./storage/app/install:/tmp
+    links:
+      - app-test
+
